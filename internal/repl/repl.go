@@ -11,6 +11,7 @@ import (
 
 	"github.com/aict-tool/aict/internal/cmdlog"
 	"github.com/aict-tool/aict/internal/config"
+	"github.com/aict-tool/aict/internal/history"
 	"github.com/aict-tool/aict/internal/parser"
 	"github.com/aict-tool/aict/internal/prompt"
 	"github.com/aict-tool/aict/internal/provider"
@@ -25,6 +26,7 @@ type Session struct {
 	shell     shell.Shell
 	blacklist *safety.Blacklist
 	logger    *cmdlog.Logger
+	recorder  *history.Recorder
 	history   []provider.Message
 	systemMsg string
 }
@@ -51,6 +53,11 @@ func NewSession(cfg *config.Config, cd config.ConfigDir) (*Session, error) {
 		return nil, err
 	}
 
+	rec, err := history.New(cd.Path)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Session{
 		cfg:       cfg,
 		configDir: cd,
@@ -58,6 +65,7 @@ func NewSession(cfg *config.Config, cd config.ConfigDir) (*Session, error) {
 		shell:     sh,
 		blacklist: bl,
 		logger:    lg,
+		recorder:  rec,
 		systemMsg: prompt.Build(sh),
 	}, nil
 }
@@ -65,7 +73,7 @@ func NewSession(cfg *config.Config, cd config.ConfigDir) (*Session, error) {
 func (s *Session) Run() error {
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:          "> ",
-		HistoryFile:     s.configDir.Path + "/history",
+		HistoryFile:     s.recorder.Dir() + "/readline",
 		InterruptPrompt: "^C",
 		EOFPrompt:       ":exit",
 	})
@@ -132,6 +140,9 @@ func (s *Session) handleQuery(input string) error {
 		RenderError("未能提取到命令，请重新描述或使用 :reset 清空历史")
 		return nil
 	}
+
+	s.recorder.LogUser(input)
+	s.recorder.LogAI(result.Explanation, result.Command)
 
 	RenderCommand(result.Command)
 	executed := s.handleConfirm(result.Command, msgs, input)
@@ -228,10 +239,12 @@ func (s *Session) executeCommand(cmd string) bool {
 	fmt.Println()
 	if err := shell.Execute(s.shell, cmd, nil); err != nil {
 		s.logger.Log(cmd, false)
+		s.recorder.LogExec(cmd, false)
 		RenderError("执行失败：" + err.Error())
 		return false
 	}
 	s.logger.Log(cmd, true)
+	s.recorder.LogExec(cmd, true)
 	fmt.Println()
 	return true
 }
@@ -271,6 +284,7 @@ func (s *Session) editCommand(cmd string) string {
 func (s *Session) applyMeta(meta MetaResult) {
 	if meta.ResetHistory {
 		s.history = nil
+		s.recorder.LogReset()
 	}
 	if meta.SwitchProvider == "?" {
 		s.listProviders()
