@@ -1,0 +1,53 @@
+[[rules]]
+id      = "rm-rf-root"
+pattern = "^\\s*rm\\s+(-[rRfF]+\\s+)+/\\s*$"
+reason  = "递归删除根目录会破坏整个系统"
+source  = "builtin"
+
+[[rules]]
+id      = "rm-rf-home"
+pattern = "^\\s*rm\\s+-[rRfF]+\\s+(~|\\$HOME)(\\s|$)"
+reason  = "递归删除 home 目录会丢失所有用户数据"
+source  = "builtin"
+
+[[rules]]
+id      = "mkfs"
+pattern = "\\bmkfs(\\.\\w+)?\\b"
+reason  = "格式化文件系统会清除所有数据"
+source  = "builtin"
+
+[[rules]]
+id      = "dd-of-dev"
+pattern = "\\bdd\\b.*\\bof=/dev/(sd|hd|nvme|disk)"
+reason  = "直接写入磁盘设备会破坏数据"
+source  = "builtin"
+
+[[rules]]
+id      = "windows-format"
+pattern = "(?i)^\\s*format\\s+[a-z]:"
+reason  = "Windows 分区格式化会清除所有数据"
+source  = "builtin"
+
+[[rules]]
+id      = "disk-redirect"
+pattern = ">\\s*/dev/(sd|hd|nvme|disk)"
+reason  = "重定向到磁盘设备会覆盖数据"
+source  = "builtin"
+
+[[rules]]
+id      = "chmod-777-root"
+pattern = "\\bchmod\\s+-R?\\s*777\\s+/"
+reason  = "递归修改根目录权限为 777 存在严重安全风险"
+source  = "builtin"
+
+[[rules]]
+id      = "forkbomb"
+pattern = ":\\(\\)\\s*\\{\\s*:|\\\\s*:&\\s*\\}\\s*;\\s*:"
+reason  = "Fork bomb 会耗尽系统资源导致崩溃"
+source  = "builtin"
+
+[[rules]]
+id      = "curl-pipe-sh"
+pattern = "\\b(curl|wget)\\b.*\\|\\s*(sh|bash|zsh|pwsh)"
+reason  = "直接执行远程脚本存在安全风险，建议先下载检查"
+source  = "builtin"
