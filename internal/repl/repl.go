@@ -9,9 +9,8 @@ import (
 
 	"github.com/chzyer/readline"
 
-	"github.com/aict-tool/aict/internal/cmdlog"
 	"github.com/aict-tool/aict/internal/config"
-	"github.com/aict-tool/aict/internal/history"
+	"github.com/aict-tool/aict/internal/logs"
 	"github.com/aict-tool/aict/internal/parser"
 	"github.com/aict-tool/aict/internal/prompt"
 	"github.com/aict-tool/aict/internal/provider"
@@ -25,8 +24,7 @@ type Session struct {
 	prov      provider.Provider
 	shell     shell.Shell
 	blacklist *safety.Blacklist
-	logger    *cmdlog.Logger
-	recorder  *history.Recorder
+	recorder  *logs.Recorder
 	history   []provider.Message
 	systemMsg string
 }
@@ -48,12 +46,7 @@ func NewSession(cfg *config.Config, cd config.ConfigDir) (*Session, error) {
 		return nil, err
 	}
 
-	lg, err := cmdlog.New(cd.Path)
-	if err != nil {
-		return nil, err
-	}
-
-	rec, err := history.New(cd.Path)
+	rec, err := logs.New(cd.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +57,6 @@ func NewSession(cfg *config.Config, cd config.ConfigDir) (*Session, error) {
 		prov:      p,
 		shell:     sh,
 		blacklist: bl,
-		logger:    lg,
 		recorder:  rec,
 		systemMsg: prompt.Build(sh),
 	}, nil
@@ -238,12 +230,10 @@ func (s *Session) handleConfirm(cmd string, msgs []provider.Message, userInput s
 func (s *Session) executeCommand(cmd string) bool {
 	fmt.Println()
 	if err := shell.Execute(s.shell, cmd, nil); err != nil {
-		s.logger.Log(cmd, false)
 		s.recorder.LogExec(cmd, false)
 		RenderError("执行失败：" + err.Error())
 		return false
 	}
-	s.logger.Log(cmd, true)
 	s.recorder.LogExec(cmd, true)
 	fmt.Println()
 	return true

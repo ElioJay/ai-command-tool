@@ -138,7 +138,7 @@ internal/parser/           流式 Markdown 解析，提取命令和解释
 internal/shell/            Shell 检测与命令执行
 internal/prompt/           System prompt 构建
 internal/safety/           安全黑名单
-internal/cmdlog/           命令执行日志
+internal/logs/             日志记录（按天归档）
 internal/repl/             REPL 主循环、渲染、确认菜单、元命令
 ```
 

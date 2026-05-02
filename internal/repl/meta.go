@@ -65,7 +65,10 @@ func HandleMeta(input string) MetaResult {
 
 func printHelp() {
 	help := `
-可用命令：
+使用方式：直接输入中文描述需求，aict 会生成对应命令并解释。
+
+REPL 命令：
+  /help               显示此帮助
   /exit / /quit       退出 aict
   /reset              清空当前对话历史
   /provider           列出所有已配置的 provider
@@ -74,9 +77,24 @@ func printHelp() {
   /model <name>       切换当前 provider 的模型
   /blacklist          列出所有黑名单规则
   /config dir         显示配置目录及运行模式
-  /help               显示此帮助
 
-提示：直接输入中文描述需求，aict 会生成对应命令并解释。
+命令生成后的确认操作：
+  y                   执行命令
+  N                   取消（默认，直接回车即取消）
+  e                   编辑命令后再决定
+  r                   让 AI 重新生成命令
+  d                   让 AI 给出更详细的解释
+  b                   将该命令模式加入黑名单
+
+CLI 子命令（在终端中使用）：
+  aict init           重新运行配置向导
+  aict add provider   添加新的 AI provider
+  aict add model      为已有 provider 设置模型
+  aict edit provider  修改已有 provider 的配置
+  aict edit model     修改已有 provider 的模型
+  aict delete provider 删除已有的 provider
+  aict config show    显示当前配置（API Key 脱敏）
+  aict version        显示版本号
 `
 	fmt.Print(help)
 }

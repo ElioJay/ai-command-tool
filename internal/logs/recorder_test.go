@@ -1,4 +1,4 @@
-package history
+package logs
 
 import (
 	"os"
@@ -30,8 +30,7 @@ func TestRecorder(t *testing.T) {
 
 	checks := []string{
 		"[USER] 查看磁盘空间",
-		"[AI] 使用 df -h 查看磁盘使用情况",
-		"命令：df -h",
+		"[AI] 使用 df -h 查看磁盘使用情况 | 命令：df -h",
 		"[EXEC[OK]] df -h",
 		"[EXEC[FAIL]] bad-cmd",
 		"[SYSTEM] 对话历史已清空",

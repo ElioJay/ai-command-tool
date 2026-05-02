@@ -1,4 +1,4 @@
-package history
+package logs
 
 import (
 	"fmt"
@@ -12,12 +12,20 @@ type Recorder struct {
 }
 
 func New(configDir string) (*Recorder, error) {
-	dir := filepath.Join(configDir, "history")
-	if info, err := os.Stat(dir); err == nil && !info.IsDir() {
-		os.Rename(dir, dir+".old")
+	dir := filepath.Join(configDir, "logs")
+
+	// 兼容旧版：history 文件迁移
+	oldFile := filepath.Join(configDir, "history")
+	if info, err := os.Stat(oldFile); err == nil && !info.IsDir() {
+		os.Rename(oldFile, oldFile+".old")
 	}
+	// 兼容旧版：history 目录迁移为 logs
+	if info, err := os.Stat(oldFile); err == nil && info.IsDir() {
+		os.Rename(oldFile, dir)
+	}
+
 	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return nil, fmt.Errorf("创建历史目录失败: %w", err)
+		return nil, fmt.Errorf("创建日志目录失败: %w", err)
 	}
 	return &Recorder{dir: dir}, nil
 }
@@ -28,7 +36,7 @@ func (r *Recorder) LogUser(input string) {
 
 func (r *Recorder) LogAI(explanation string, command string) {
 	if command != "" {
-		r.write("AI", explanation+"\n命令："+command)
+		r.write("AI", explanation+" | 命令："+command)
 	} else {
 		r.write("AI", explanation)
 	}
