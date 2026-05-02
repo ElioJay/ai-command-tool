@@ -22,6 +22,10 @@ func run(args []string) error {
 			return runInit()
 		case "add":
 			return runAdd(args[1:])
+		case "edit":
+			return runEdit(args[1:])
+		case "delete", "remove":
+			return runDelete(args[1:])
 		case "config":
 			return runConfig(args[1:])
 		case "version", "--version", "-v":
@@ -110,6 +114,42 @@ func runAdd(args []string) error {
 	return session.Run()
 }
 
+func runEdit(args []string) error {
+	if len(args) == 0 {
+		fmt.Println("用法：aict edit <provider|model>")
+		fmt.Println("  provider  修改已有 provider 的配置")
+		fmt.Println("  model     修改已有 provider 的模型")
+		return nil
+	}
+	cd := config.Resolve()
+	switch args[0] {
+	case "provider":
+		_, err := config.EditProvider(cd)
+		return err
+	case "model":
+		_, err := config.AddModel(cd)
+		return err
+	default:
+		return fmt.Errorf("未知子命令：edit %s（可选：provider, model）", args[0])
+	}
+}
+
+func runDelete(args []string) error {
+	if len(args) == 0 {
+		fmt.Println("用法：aict delete <provider>")
+		fmt.Println("  provider  删除已有的 AI provider")
+		return nil
+	}
+	cd := config.Resolve()
+	switch args[0] {
+	case "provider":
+		_, err := config.DeleteProvider(cd)
+		return err
+	default:
+		return fmt.Errorf("未知子命令：delete %s（可选：provider）", args[0])
+	}
+}
+
 func runConfig(args []string) error {
 	if len(args) == 0 {
 		printUsage()
@@ -148,21 +188,26 @@ func printUsage() {
 用法：aict [命令]
 
 命令：
-  （无参数）     进入交互式 REPL
-  init           重新运行配置向导
-  add provider   添加新的 AI provider
-  add model      为已有 provider 设置模型
-  config show    显示当前配置
-  version        显示版本
-  help           显示帮助
+  （无参数）        进入交互式 REPL
+  init              重新运行配置向导
+  add provider      添加新的 AI provider
+  add model         为已有 provider 设置模型
+  edit provider     修改已有 provider 的配置
+  edit model        修改已有 provider 的模型
+  delete provider   删除已有的 provider
+  config show       显示当前配置
+  version           显示版本
+  help              显示帮助
 
-REPL 内元命令：
-  :exit          退出
-  :reset         清空对话历史
-  :provider <x>  切换 provider
-  :model <x>     切换模型
-  :blacklist     列出黑名单
-  :config dir    显示配置目录
-  :help          REPL 帮助
+REPL 内命令：
+  /exit          退出
+  /reset         清空对话历史
+  /provider      列出已配置的 provider
+  /provider <x>  切换 provider
+  /model         显示当前模型
+  /model <x>     切换模型
+  /blacklist     列出黑名单
+  /config dir    显示配置目录
+  /help          REPL 帮助
 `)
 }

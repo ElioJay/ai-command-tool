@@ -13,6 +13,9 @@ type Recorder struct {
 
 func New(configDir string) (*Recorder, error) {
 	dir := filepath.Join(configDir, "history")
+	if info, err := os.Stat(dir); err == nil && !info.IsDir() {
+		os.Rename(dir, dir+".old")
+	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, fmt.Errorf("创建历史目录失败: %w", err)
 	}

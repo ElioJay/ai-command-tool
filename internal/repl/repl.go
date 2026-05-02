@@ -75,7 +75,7 @@ func (s *Session) Run() error {
 		Prompt:          "> ",
 		HistoryFile:     s.recorder.Dir() + "/readline",
 		InterruptPrompt: "^C",
-		EOFPrompt:       ":exit",
+		EOFPrompt:       "/exit",
 	})
 	if err != nil {
 		return err
@@ -83,7 +83,7 @@ func (s *Session) Run() error {
 	defer rl.Close()
 
 	colorMeta.Printf("aict 已启动（provider: %s，shell: %s）\n", s.prov.Name(), s.shell.Kind)
-	colorMeta.Println("输入中文描述需求，或输入 :help 查看帮助")
+	colorMeta.Println("输入中文描述需求，或输入 /help 查看帮助")
 	fmt.Println()
 
 	for {
@@ -137,7 +137,7 @@ func (s *Session) handleQuery(input string) error {
 	RenderSeparator()
 
 	if result.Command == "" {
-		RenderError("未能提取到命令，请重新描述或使用 :reset 清空历史")
+		RenderError("未能提取到命令，请重新描述或使用 /reset 清空历史")
 		return nil
 	}
 
@@ -309,7 +309,7 @@ func (s *Session) applyMeta(meta MetaResult) {
 	if meta.SwitchModel == "?" {
 		pc := s.cfg.Providers[s.cfg.DefaultProvider]
 		fmt.Printf("当前 provider: %s，模型: %s\n", s.cfg.DefaultProvider, pc.Model)
-		fmt.Println("用法：:model <模型名称>  例如 :model gpt-4o-mini")
+		fmt.Println("用法：/model <模型名称>  例如 /model gpt-4o-mini")
 		return
 	}
 	if meta.SwitchModel != "" {
@@ -344,5 +344,5 @@ func (s *Session) listProviders() {
 		}
 		fmt.Printf("  %s%s（模型: %s）\n", mark, name, pc.Model)
 	}
-	fmt.Println("用法：:provider <name>  切换 provider")
+	fmt.Println("用法：/provider <name>  切换 provider")
 }

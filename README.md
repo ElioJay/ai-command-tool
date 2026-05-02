@@ -59,27 +59,34 @@ $ du -ah . | sort -rh | head -10
 
 ## CLI 命令
 
-| 命令              | 说明                         |
-| ----------------- | ---------------------------- |
-| `aict`            | 进入交互式 REPL              |
-| `aict init`       | 重新运行配置向导             |
-| `aict config show`| 显示当前配置（API Key 脱敏） |
-| `aict version`    | 显示版本号                   |
-| `aict help`       | 显示帮助信息                 |
+| 命令                    | 说明                         |
+| ----------------------- | ---------------------------- |
+| `aict`                  | 进入交互式 REPL              |
+| `aict init`             | 重新运行配置向导             |
+| `aict add provider`     | 添加新的 AI provider         |
+| `aict add model`        | 为已有 provider 设置模型     |
+| `aict edit provider`    | 修改已有 provider 的配置     |
+| `aict edit model`       | 修改已有 provider 的模型     |
+| `aict delete provider`  | 删除已有的 provider          |
+| `aict config show`      | 显示当前配置（API Key 脱敏） |
+| `aict version`          | 显示版本号                   |
+| `aict help`             | 显示帮助信息                 |
 
-## REPL 元命令
+## REPL 命令
 
 在交互界面中输入以下命令：
 
 | 命令               | 说明                                                  |
 | ------------------ | ----------------------------------------------------- |
-| `:exit` / `:quit`  | 退出                                                  |
-| `:reset`           | 清空当前对话历史                                      |
-| `:provider <name>` | 切换 AI provider（如 `claude`、`openai`、`ollama`）   |
-| `:model <name>`    | 切换当前 provider 的模型                              |
-| `:blacklist`       | 列出所有黑名单规则                                    |
-| `:config dir`      | 显示配置目录及运行模式                                |
-| `:help`            | 显示帮助                                              |
+| `/exit` / `/quit`  | 退出                                                  |
+| `/reset`           | 清空当前对话历史                                      |
+| `/provider`        | 列出所有已配置的 provider                             |
+| `/provider <name>` | 切换 AI provider（如 `claude`、`openai`、`ollama`）   |
+| `/model`           | 显示当前 provider 和模型                              |
+| `/model <name>`    | 切换当前 provider 的模型                              |
+| `/blacklist`       | 列出所有黑名单规则                                    |
+| `/config dir`      | 显示配置目录及运行模式                                |
+| `/help`            | 显示帮助                                              |
 
 ## 配置
 

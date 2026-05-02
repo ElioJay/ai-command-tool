@@ -108,7 +108,7 @@ color  = "auto"
 
 #### 配置多个 Provider
 
-在同一个文件中添加多个 provider 段落，运行时用 `:provider` 命令切换：
+在同一个文件中添加多个 provider 段落，运行时用 `/provider` 命令切换：
 
 ```toml
 default_provider = "claude"
@@ -169,7 +169,7 @@ echo 'export AICT_CLAUDE_API_KEY="sk-ant-xxxxx"' >> ~/.bashrc
 
 ```text
 aict 已启动（provider: claude，shell: bash）
-输入中文描述需求，或输入 :help 查看帮助
+输入中文描述需求，或输入 /help 查看帮助
 
 >
 ```
@@ -220,43 +220,57 @@ aict 会记住对话上下文。你可以基于前一次的结果继续追问：
 （AI 会基于上下文理解"刚才的结果"）
 ```
 
-输入 `:reset` 可清空对话历史，开始新的对话。
+输入 `/reset` 可清空对话历史，开始新的对话。
 
 ---
 
-## 4. 元命令
+## 4. REPL 命令
 
-在交互界面中，以 `:` 开头的输入会被识别为元命令（不会发送给 AI）：
+在交互界面中，以 `/` 开头的输入会被识别为内置命令（不会发送给 AI）：
 
 ```text
-> :help
+> /help
 
-可用元命令：
-  :exit / :quit       退出 aict
-  :reset              清空当前对话历史
-  :provider <name>    切换 AI provider（claude/openai/ollama 等）
-  :model <name>       切换当前 provider 的模型
-  :blacklist          列出所有黑名单规则
-  :config dir         显示配置目录及运行模式
-  :help               显示此帮助
+可用命令：
+  /exit / /quit       退出 aict
+  /reset              清空当前对话历史
+  /provider           列出所有已配置的 provider
+  /provider <name>    切换 AI provider（claude/openai/ollama 等）
+  /model              显示当前 provider 和模型
+  /model <name>       切换当前 provider 的模型
+  /blacklist          列出所有黑名单规则
+  /config dir         显示配置目录及运行模式
+  /help               显示此帮助
 ```
 
-### 4.1 切换 Provider 和模型
+### 4.1 查看和切换 Provider
 
 ```text
-> :provider openai
-已切换到 provider: openai
+> /provider
+可用 provider：
+  * claude（模型: claude-sonnet-4-6）
+    openai（模型: gpt-4o）
 
-> :model gpt-4o-mini
-已切换模型: gpt-4o-mini
+> /provider openai
+已切换到 provider: openai（模型: gpt-4o）
+```
+
+### 4.2 查看和切换模型
+
+```text
+> /model
+当前 provider: openai，模型: gpt-4o
+
+> /model gpt-4o-mini
+已切换模型: gpt-4o-mini（provider: openai）
 ```
 
 切换仅在当前会话生效，不会修改配置文件。
 
-### 4.2 查看配置信息
+### 4.3 查看配置信息
 
 ```text
-> :config dir
+> /config dir
 配置目录：/home/elio/.aict
 运行模式：installed
 ```
@@ -292,7 +306,7 @@ aict 内置了一组高危命令拦截规则（正则匹配），包括：
 ### 5.2 查看规则
 
 ```text
-> :blacklist
+> /blacklist
 [builtin] rm-rf-root
   模式：^\s*rm\s+(-[rRfF]+\s+)+/\s*$
   原因：递归删除根目录会破坏整个系统
@@ -356,10 +370,10 @@ cp dist/aict-linux-amd64 ~/my-aict/aict
 chmod +x ~/my-aict/aict
 ```
 
-运行后通过 `:config dir` 确认模式：
+运行后通过 `/config dir` 确认模式：
 
 ```text
-> :config dir
+> /config dir
 配置目录：/home/elio/my-aict/.aict
 运行模式：portable
 ```
@@ -379,6 +393,18 @@ chmod +x ~/my-aict/aict
 
 # 重新运行配置向导
 ./aict init
+
+# 添加新的 provider
+./aict add provider
+
+# 修改已有 provider 的配置（Base URL、API Key、模型）
+./aict edit provider
+
+# 修改已有 provider 的模型
+./aict edit model
+
+# 删除已有的 provider
+./aict delete provider
 
 # 查看当前配置（API Key 脱敏显示）
 ./aict config show
@@ -476,11 +502,11 @@ API Key 无效或过期。检查方式：
 
 ### Q: 如何清空对话历史？
 
-在 REPL 中输入 `:reset`，或退出后重新启动。
+在 REPL 中输入 `/reset`，或退出后重新启动。
 
 ### Q: 日志文件在哪里？
 
-运行 `:config dir` 查看配置目录，日志位于其下的 `log/` 子目录。
+运行 `/config dir` 查看配置目录，日志位于其下的 `log/` 子目录。
 
 ### Q: 提示 "permission denied" 怎么办？
 

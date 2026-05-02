@@ -169,6 +169,35 @@ func AddProvider(cd ConfigDir) (*Config, error) {
 	return cfg, nil
 }
 
+func pickProvider(cfg *Config, scanner *bufio.Scanner, prompt string) string {
+	fmt.Println(prompt)
+	names := make([]string, 0, len(cfg.Providers))
+	i := 1
+	for n := range cfg.Providers {
+		mark := ""
+		if n == cfg.DefaultProvider {
+			mark = "（默认）"
+		}
+		fmt.Printf("  %d) %s%s  [模型: %s]\n", i, n, mark, cfg.Providers[n].Model)
+		names = append(names, n)
+		i++
+	}
+	fmt.Print("> ")
+	scanner.Scan()
+	choice := strings.TrimSpace(scanner.Text())
+
+	for idx, n := range names {
+		if choice == fmt.Sprintf("%d", idx+1) || choice == n {
+			return n
+		}
+	}
+	if len(names) == 1 {
+		fmt.Printf("仅有一个 provider，已自动选择：%s\n", names[0])
+		return names[0]
+	}
+	return ""
+}
+
 func AddModel(cd ConfigDir) (*Config, error) {
 	cfg, err := Load(cd.Path)
 	if err != nil {
@@ -183,38 +212,10 @@ func AddModel(cd ConfigDir) (*Config, error) {
 	fmt.Println("为 provider 设置模型")
 	fmt.Println()
 
-	// 列出已有 provider 供选择
-	names := make([]string, 0, len(cfg.Providers))
-	i := 1
-	for n := range cfg.Providers {
-		mark := ""
-		if n == cfg.DefaultProvider {
-			mark = "（默认）"
-		}
-		fmt.Printf("  %d) %s%s  [当前模型: %s]\n", i, n, mark, cfg.Providers[n].Model)
-		names = append(names, n)
-		i++
-	}
-	fmt.Print("> ")
-	scanner.Scan()
-	choice := strings.TrimSpace(scanner.Text())
-
-	var targetName string
-	// 支持按编号或名称选择
-	for idx, n := range names {
-		if choice == fmt.Sprintf("%d", idx+1) || choice == n {
-			targetName = n
-			break
-		}
-	}
+	targetName := pickProvider(cfg, scanner, "选择要修改模型的 provider：")
 	if targetName == "" {
-		if len(names) == 1 {
-			targetName = names[0]
-			fmt.Printf("仅有一个 provider，已自动选择：%s\n", targetName)
-		} else {
-			fmt.Println("已取消。")
-			return cfg, nil
-		}
+		fmt.Println("已取消。")
+		return cfg, nil
 	}
 
 	pc := cfg.Providers[targetName]
@@ -231,6 +232,98 @@ func AddModel(cd ConfigDir) (*Config, error) {
 		return nil, fmt.Errorf("保存配置失败: %w", err)
 	}
 	fmt.Printf("\n%s 的模型已更新为 %s\n", targetName, newModel)
+	printProviders(cfg)
+	return cfg, nil
+}
+
+func EditProvider(cd ConfigDir) (*Config, error) {
+	cfg, err := Load(cd.Path)
+	if err != nil {
+		return nil, err
+	}
+	if len(cfg.Providers) == 0 {
+		return nil, fmt.Errorf("尚未配置任何 provider，请先运行 aict init 或 aict add provider")
+	}
+
+	scanner, readLine := newScanner()
+
+	targetName := pickProvider(cfg, scanner, "选择要修改的 provider：")
+	if targetName == "" {
+		fmt.Println("已取消。")
+		return cfg, nil
+	}
+
+	pc := cfg.Providers[targetName]
+	fmt.Printf("\n正在编辑 provider: %s\n", targetName)
+	fmt.Println("（直接回车保持当前值不变）")
+
+	pc.BaseURL = readLine(fmt.Sprintf("Base URL（当前: %s）", pc.BaseURL), pc.BaseURL)
+
+	maskedKey := "（未设置）"
+	if len(pc.APIKey) > 8 {
+		maskedKey = pc.APIKey[:4] + "..." + pc.APIKey[len(pc.APIKey)-4:]
+	} else if pc.APIKey != "" {
+		maskedKey = "***"
+	}
+	newKey := readLine(fmt.Sprintf("API Key（当前: %s）", maskedKey), "")
+	if newKey != "" {
+		pc.APIKey = newKey
+	}
+
+	pc.Model = readLine(fmt.Sprintf("模型名称（当前: %s）", pc.Model), pc.Model)
+
+	cfg.Providers[targetName] = pc
+
+	if err := Save(cfg, cd.Path); err != nil {
+		return nil, fmt.Errorf("保存配置失败: %w", err)
+	}
+	fmt.Printf("\nprovider %q 已更新。\n", targetName)
+	printProviders(cfg)
+	return cfg, nil
+}
+
+func DeleteProvider(cd ConfigDir) (*Config, error) {
+	cfg, err := Load(cd.Path)
+	if err != nil {
+		return nil, err
+	}
+	if len(cfg.Providers) == 0 {
+		return nil, fmt.Errorf("尚未配置任何 provider")
+	}
+	if len(cfg.Providers) == 1 {
+		return nil, fmt.Errorf("仅剩一个 provider，无法删除。请先添加其他 provider")
+	}
+
+	scanner, _ := newScanner()
+
+	targetName := pickProvider(cfg, scanner, "选择要删除的 provider：")
+	if targetName == "" {
+		fmt.Println("已取消。")
+		return cfg, nil
+	}
+
+	fmt.Printf("确定要删除 provider %q？[y/N] ", targetName)
+	scanner.Scan()
+	ans := strings.TrimSpace(scanner.Text())
+	if ans != "y" && ans != "Y" {
+		fmt.Println("已取消。")
+		return cfg, nil
+	}
+
+	delete(cfg.Providers, targetName)
+
+	if cfg.DefaultProvider == targetName {
+		for n := range cfg.Providers {
+			cfg.DefaultProvider = n
+			fmt.Printf("默认 provider 已自动切换为：%s\n", n)
+			break
+		}
+	}
+
+	if err := Save(cfg, cd.Path); err != nil {
+		return nil, fmt.Errorf("保存配置失败: %w", err)
+	}
+	fmt.Printf("provider %q 已删除。\n", targetName)
 	printProviders(cfg)
 	return cfg, nil
 }
