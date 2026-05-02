@@ -272,10 +272,15 @@ func (s *Session) applyMeta(meta MetaResult) {
 	if meta.ResetHistory {
 		s.history = nil
 	}
+	if meta.SwitchProvider == "?" {
+		s.listProviders()
+		return
+	}
 	if meta.SwitchProvider != "" {
 		pc, ok := s.cfg.Providers[meta.SwitchProvider]
 		if !ok {
 			RenderError(fmt.Sprintf("provider %q 未配置", meta.SwitchProvider))
+			s.listProviders()
 			return
 		}
 		p, err := provider.Build(meta.SwitchProvider, pc)
@@ -285,7 +290,13 @@ func (s *Session) applyMeta(meta MetaResult) {
 		}
 		s.prov = p
 		s.cfg.DefaultProvider = meta.SwitchProvider
-		fmt.Printf("已切换到 provider: %s\n", meta.SwitchProvider)
+		fmt.Printf("已切换到 provider: %s（模型: %s）\n", meta.SwitchProvider, pc.Model)
+	}
+	if meta.SwitchModel == "?" {
+		pc := s.cfg.Providers[s.cfg.DefaultProvider]
+		fmt.Printf("当前 provider: %s，模型: %s\n", s.cfg.DefaultProvider, pc.Model)
+		fmt.Println("用法：:model <模型名称>  例如 :model gpt-4o-mini")
+		return
 	}
 	if meta.SwitchModel != "" {
 		pc := s.cfg.Providers[s.cfg.DefaultProvider]
@@ -297,7 +308,7 @@ func (s *Session) applyMeta(meta MetaResult) {
 			return
 		}
 		s.prov = p
-		fmt.Printf("已切换模型: %s\n", meta.SwitchModel)
+		fmt.Printf("已切换模型: %s（provider: %s）\n", meta.SwitchModel, s.cfg.DefaultProvider)
 	}
 	if meta.ShowBlacklist {
 		for _, r := range s.blacklist.List() {
@@ -308,4 +319,16 @@ func (s *Session) applyMeta(meta MetaResult) {
 	if meta.ShowConfigDir {
 		colorMeta.Printf("配置目录：%s\n运行模式：%s\n", s.configDir.Path, s.configDir.Mode)
 	}
+}
+
+func (s *Session) listProviders() {
+	fmt.Println("可用 provider：")
+	for name, pc := range s.cfg.Providers {
+		mark := "  "
+		if name == s.cfg.DefaultProvider {
+			mark = "* "
+		}
+		fmt.Printf("  %s%s（模型: %s）\n", mark, name, pc.Model)
+	}
+	fmt.Println("用法：:provider <name>  切换 provider")
 }

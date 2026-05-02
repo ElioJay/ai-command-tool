@@ -19,7 +19,7 @@ var providerDefaults = map[string]ProviderConfig{
 	"ollama":   {BaseURL: "http://localhost:11434/v1", Model: "qwen2.5-coder:7b"},
 }
 
-func RunWizard() (*WizardResult, error) {
+func newScanner() (*bufio.Scanner, func(prompt, defaultVal string) string) {
 	scanner := bufio.NewScanner(os.Stdin)
 	readLine := func(prompt, defaultVal string) string {
 		if defaultVal != "" {
@@ -34,11 +34,11 @@ func RunWizard() (*WizardResult, error) {
 		}
 		return val
 	}
+	return scanner, readLine
+}
 
-	fmt.Println("欢迎使用 aict！我们来完成首次配置。")
-	fmt.Println()
-
-	fmt.Println("[1/5] 选择默认 AI provider：")
+func askProvider(scanner *bufio.Scanner, readLine func(string, string) string) (name string, pc ProviderConfig) {
+	fmt.Println("选择 AI provider：")
 	fmt.Println("  1) Claude (官方)")
 	fmt.Println("  2) OpenAI (官方)")
 	fmt.Println("  3) DeepSeek")
@@ -48,35 +48,44 @@ func RunWizard() (*WizardResult, error) {
 	scanner.Scan()
 	choice := strings.TrimSpace(scanner.Text())
 
-	providerName := "claude"
+	name = "claude"
 	switch choice {
 	case "2":
-		providerName = "openai"
+		name = "openai"
 	case "3":
-		providerName = "deepseek"
+		name = "deepseek"
 	case "4":
-		providerName = "ollama"
+		name = "ollama"
 	case "5":
-		providerName = readLine("Provider 名称（如 my-api）", "custom")
+		name = readLine("Provider 名称（如 my-api）", "custom")
 	}
 
-	defaults := providerDefaults[providerName]
+	defaults := providerDefaults[name]
+	pc.BaseURL = readLine("Base URL", defaults.BaseURL)
 
-	baseURL := readLine(fmt.Sprintf("[2/5] Base URL"), defaults.BaseURL)
-
-	apiKey := ""
-	if providerName != "ollama" {
-		apiKey = readLine("[3/5] API Key", "")
-		if apiKey == "" {
+	if name != "ollama" {
+		pc.APIKey = readLine("API Key", "")
+		if pc.APIKey == "" {
 			fmt.Println("警告：未设置 API Key，后续可通过 AICT_<PROVIDER>_API_KEY 环境变量设置。")
 		}
 	} else {
-		fmt.Println("[3/5] Ollama 本地模式，无需 API Key。")
+		fmt.Println("Ollama 本地模式，无需 API Key。")
 	}
 
-	model := readLine("[4/5] 模型名称", defaults.Model)
+	pc.Model = readLine("模型名称", defaults.Model)
+	return name, pc
+}
 
-	fmt.Println("\n[5/5] 配置文件保存位置：")
+func RunWizard() (*WizardResult, error) {
+	scanner, readLine := newScanner()
+
+	fmt.Println("欢迎使用 aict！我们来完成首次配置。")
+	fmt.Println()
+
+	fmt.Println("[1/4] ", "")
+	providerName, pc := askProvider(scanner, readLine)
+
+	fmt.Println("\n[2/4] 配置文件保存位置：")
 	exePath, _ := os.Executable()
 	exeDir := ""
 	if exePath != "" {
@@ -108,11 +117,7 @@ func RunWizard() (*WizardResult, error) {
 	cfg := &Config{
 		DefaultProvider: providerName,
 		Providers: map[string]ProviderConfig{
-			providerName: {
-				BaseURL: baseURL,
-				APIKey:  apiKey,
-				Model:   model,
-			},
+			providerName: pc,
 		},
 		UI: UIConfig{Stream: true, Color: "auto"},
 	}
@@ -122,4 +127,122 @@ func RunWizard() (*WizardResult, error) {
 	}
 	fmt.Printf("\n配置已保存到 %s\n", cd.Path)
 	return &WizardResult{ConfigDir: cd, Config: cfg}, nil
+}
+
+func AddProvider(cd ConfigDir) (*Config, error) {
+	cfg, err := Load(cd.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	scanner, readLine := newScanner()
+
+	fmt.Println("添加新的 AI provider")
+	fmt.Println()
+
+	name, pc := askProvider(scanner, readLine)
+
+	if _, exists := cfg.Providers[name]; exists {
+		fmt.Printf("provider %q 已存在，是否覆盖？[y/N] ", name)
+		scanner.Scan()
+		ans := strings.TrimSpace(scanner.Text())
+		if ans != "y" && ans != "Y" {
+			fmt.Println("已取消。")
+			return cfg, nil
+		}
+	}
+
+	cfg.Providers[name] = pc
+
+	fmt.Printf("是否将 %s 设为默认 provider？[y/N] ", name)
+	scanner.Scan()
+	ans := strings.TrimSpace(scanner.Text())
+	if ans == "y" || ans == "Y" {
+		cfg.DefaultProvider = name
+	}
+
+	if err := Save(cfg, cd.Path); err != nil {
+		return nil, fmt.Errorf("保存配置失败: %w", err)
+	}
+	fmt.Printf("\nprovider %q 已添加。\n", name)
+	printProviders(cfg)
+	return cfg, nil
+}
+
+func AddModel(cd ConfigDir) (*Config, error) {
+	cfg, err := Load(cd.Path)
+	if err != nil {
+		return nil, err
+	}
+	if len(cfg.Providers) == 0 {
+		return nil, fmt.Errorf("尚未配置任何 provider，请先运行 aict init 或 aict add provider")
+	}
+
+	scanner, readLine := newScanner()
+
+	fmt.Println("为 provider 设置模型")
+	fmt.Println()
+
+	// 列出已有 provider 供选择
+	names := make([]string, 0, len(cfg.Providers))
+	i := 1
+	for n := range cfg.Providers {
+		mark := ""
+		if n == cfg.DefaultProvider {
+			mark = "（默认）"
+		}
+		fmt.Printf("  %d) %s%s  [当前模型: %s]\n", i, n, mark, cfg.Providers[n].Model)
+		names = append(names, n)
+		i++
+	}
+	fmt.Print("> ")
+	scanner.Scan()
+	choice := strings.TrimSpace(scanner.Text())
+
+	var targetName string
+	// 支持按编号或名称选择
+	for idx, n := range names {
+		if choice == fmt.Sprintf("%d", idx+1) || choice == n {
+			targetName = n
+			break
+		}
+	}
+	if targetName == "" {
+		if len(names) == 1 {
+			targetName = names[0]
+			fmt.Printf("仅有一个 provider，已自动选择：%s\n", targetName)
+		} else {
+			fmt.Println("已取消。")
+			return cfg, nil
+		}
+	}
+
+	pc := cfg.Providers[targetName]
+	newModel := readLine(fmt.Sprintf("新模型名称（当前: %s）", pc.Model), "")
+	if newModel == "" {
+		fmt.Println("未输入模型名称，已取消。")
+		return cfg, nil
+	}
+
+	pc.Model = newModel
+	cfg.Providers[targetName] = pc
+
+	if err := Save(cfg, cd.Path); err != nil {
+		return nil, fmt.Errorf("保存配置失败: %w", err)
+	}
+	fmt.Printf("\n%s 的模型已更新为 %s\n", targetName, newModel)
+	printProviders(cfg)
+	return cfg, nil
+}
+
+func printProviders(cfg *Config) {
+	fmt.Print("当前已配置的 provider：")
+	for n, pc := range cfg.Providers {
+		mark := ""
+		if n == cfg.DefaultProvider {
+			mark = "*"
+		}
+		fmt.Printf(" %s%s(%s)", n, mark, pc.Model)
+	}
+	fmt.Println()
 }

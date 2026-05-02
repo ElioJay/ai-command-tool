@@ -38,14 +38,12 @@ func HandleMeta(input string) MetaResult {
 		return MetaResult{Handled: true, ResetHistory: true}
 	case "provider":
 		if arg == "" {
-			fmt.Println("用法：:provider <name>")
-			return MetaResult{Handled: true}
+			return MetaResult{Handled: true, SwitchProvider: "?"}
 		}
 		return MetaResult{Handled: true, SwitchProvider: arg}
 	case "model":
 		if arg == "" {
-			fmt.Println("用法：:model <name>")
-			return MetaResult{Handled: true}
+			return MetaResult{Handled: true, SwitchModel: "?"}
 		}
 		return MetaResult{Handled: true, SwitchModel: arg}
 	case "blacklist":

@@ -20,6 +20,8 @@ func run(args []string) error {
 		switch args[0] {
 		case "init":
 			return runInit()
+		case "add":
+			return runAdd(args[1:])
 		case "config":
 			return runConfig(args[1:])
 		case "version", "--version", "-v":
@@ -74,6 +76,40 @@ func runInit() error {
 	return session.Run()
 }
 
+func runAdd(args []string) error {
+	if len(args) == 0 {
+		fmt.Println("用法：aict add <provider|model>")
+		fmt.Println("  provider  添加新的 AI provider")
+		fmt.Println("  model     为已有 provider 添加/切换模型")
+		return nil
+	}
+	cd := config.Resolve()
+	var cfg *config.Config
+	var err error
+	switch args[0] {
+	case "provider":
+		cfg, err = config.AddProvider(cd)
+	case "model":
+		cfg, err = config.AddModel(cd)
+	default:
+		return fmt.Errorf("未知子命令：add %s（可选：provider, model）", args[0])
+	}
+	if err != nil {
+		return err
+	}
+	fmt.Print("是否立即进入对话？[Y/n] ")
+	var ans string
+	fmt.Scanln(&ans)
+	if ans == "n" || ans == "N" {
+		return nil
+	}
+	session, err := repl.NewSession(cfg, cd)
+	if err != nil {
+		return err
+	}
+	return session.Run()
+}
+
 func runConfig(args []string) error {
 	if len(args) == 0 {
 		printUsage()
@@ -114,6 +150,8 @@ func printUsage() {
 命令：
   （无参数）     进入交互式 REPL
   init           重新运行配置向导
+  add provider   添加新的 AI provider
+  add model      为已有 provider 设置模型
   config show    显示当前配置
   version        显示版本
   help           显示帮助
