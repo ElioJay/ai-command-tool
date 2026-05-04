@@ -23,10 +23,10 @@ func Resolve() ConfigDir {
 	if err != nil {
 		return installedDir()
 	}
-	return resolveFromDir(filepath.Dir(exePath))
+	return ResolveFromDir(filepath.Dir(exePath))
 }
 
-func resolveFromDir(exeDir string) ConfigDir {
+func ResolveFromDir(exeDir string) ConfigDir {
 	portablePath := filepath.Join(exeDir, ".aict")
 	if info, err := os.Stat(portablePath); err == nil && info.IsDir() {
 		return ConfigDir{Path: portablePath, Mode: ModePortable}

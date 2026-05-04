@@ -29,10 +29,10 @@ type Shell struct {
 }
 
 func Detect() Shell {
-	return detectFromEnv()
+	return DetectFromEnv()
 }
 
-func detectFromEnv() Shell {
+func DetectFromEnv() Shell {
 	if runtime.GOOS == "windows" {
 		return detectWindows()
 	}

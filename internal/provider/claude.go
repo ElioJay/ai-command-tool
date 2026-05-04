@@ -46,7 +46,9 @@ func (p *ClaudeProvider) Stream(ctx context.Context, msgs []Message) (<-chan Chu
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-api-key", p.APIKey)
+	if p.APIKey != "" {
+		req.Header.Set("x-api-key", p.APIKey)
+	}
 	req.Header.Set("anthropic-version", "2023-06-01")
 
 	resp, err := http.DefaultClient.Do(req)

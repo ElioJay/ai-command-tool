@@ -96,7 +96,7 @@ func (s *Session) Run() error {
 			continue
 		}
 
-		if isOffTopic(input) {
+		if IsOffTopic(input) {
 			colorMeta.Println("aict 仅用于生成和执行 shell 命令。请输入与命令行操作相关的需求。")
 			continue
 		}
@@ -149,16 +149,17 @@ func (s *Session) handleQuery(input string) error {
 }
 
 func (s *Session) handleConfirm(cmd string, msgs []provider.Message, userInput string) bool {
-	if rule, hit := s.blacklist.Match(cmd); hit {
-		RenderWarning(rule.ID, rule.Reason, rule.Pattern)
-		if !AskBlacklistConfirm(cmd) {
-			fmt.Println("已取消。")
-			return false
-		}
-		return s.executeCommand(cmd)
-	}
-
 	for {
+		// 每次执行前都检查黑名单，防止编辑/重新生成后绕过
+		if rule, hit := s.blacklist.Match(cmd); hit {
+			RenderWarning(rule.ID, rule.Reason, rule.Pattern)
+			if !AskBlacklistConfirm(cmd) {
+				fmt.Println("已取消。")
+				return false
+			}
+			return s.executeCommand(cmd)
+		}
+
 		action := AskConfirm()
 		switch action {
 		case ActionExecute:

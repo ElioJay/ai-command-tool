@@ -2,6 +2,7 @@ package prompt
 
 import (
 	"fmt"
+	"path/filepath"
 	"os"
 	"runtime"
 	"time"
@@ -11,11 +12,12 @@ import (
 
 func Build(sh shell.Shell) string {
 	wd, _ := os.Getwd()
+	dirName := filepath.Base(wd)
 	return fmt.Sprintf(`你是一个命令行助手。你的唯一职责是根据用户描述生成可执行的 shell 命令。
 
 用户当前环境：
 - 操作系统：%s
-- Shell：%s (%s)
+- Shell：%s
 - 当前时间：%s
 - 工作目录：%s
 
@@ -48,9 +50,9 @@ func Build(sh shell.Shell) string {
 - 如缺少关键信息，先在「解释」中提问，「命令」块给注释说明
 - 涉及破坏性操作（删除/格式化/覆盖）时，在解释中标注风险`,
 		runtime.GOOS,
-		sh.Kind, sh.Path,
+		sh.Kind,
 		time.Now().Format("2006-01-02 15:04:05"),
-		wd,
+		dirName,
 		sh.Kind,
 	)
 }

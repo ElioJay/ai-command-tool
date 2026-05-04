@@ -20,7 +20,7 @@ var chatPatterns = []string{
 	"今天天气", "明天天气",
 }
 
-func isOffTopic(input string) bool {
+func IsOffTopic(input string) bool {
 	lower := strings.ToLower(input)
 
 	for _, p := range chatPatterns {
