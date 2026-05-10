@@ -44,4 +44,5 @@ Thumbs.db
 
 # Superpowers planning docs
 docs/superpowers/
-tests
+tests/
+.gocache/
